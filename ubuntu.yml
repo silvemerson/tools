@@ -90,10 +90,10 @@
           name: google-chrome-stable
 
     - block:
-      - name: Installing Vagrant 2.2.18
+      - name: Installing Vagrant 2.3.7
         become: true
         unarchive:
-          src: 'https://releases.hashicorp.com/vagrant/2.2.18/vagrant_2.2.18_linux_amd64.zip'
+          src: 'https://releases.hashicorp.com/vagrant/2.3.7/vagrant_2.3.7_linux_amd64.zip'
           dest: /usr/local/bin
           remote_src: yes
 
@@ -145,10 +145,10 @@
         command: mv /usr/local/bin/terraform /usr/local/bin/terraform1
 
     - block:
-      - name: Installing Vault 1.8.1
+      - name: Installing Vault 1.14.0
         become: true
         unarchive:
-          src: 'https://releases.hashicorp.com/vault/1.8.1/vault_1.8.1_linux_amd64.zip'
+          src: 'https://releases.hashicorp.com/vault/1.14.0/vault_1.14.0_linux_amd64.zip'
           dest: /usr/local/bin
           remote_src: yes
 
@@ -161,13 +161,14 @@
           mode: 755
 
     - block:
-      - name: Installing Stern 1.11.0
+      - name: Install obsproject Ubuntu Repo
         become: true
-        get_url:    
-          url: 'https://github.com/wercker/stern/releases/download/1.11.0/stern_linux_amd64'
-          dest: /usr/local/bin/stern
-          mode: 755
-
+        apt_repository:
+          repo: 'ppa:obsproject/obs-studio'
+      - name: Install obs Studio
+        become: true
+        apt:
+          name: obs-studio
     - block:
       - name: Install Google Cloud SDK Key
         become: true
@@ -185,7 +186,7 @@
         apt:
           name: google-cloud-sdk
 
-          
+
     - block:
       - name: Install Microsoft Key
         become: true
@@ -296,13 +297,7 @@
       - name: Install Golang 
         become: true
         apt:
-          name: golang-go
-          
-# OPTIONAL:
-#  - PEEK - Lightweight Screen Recorder that can export as GIF
-#  - OBS-STUDIO - Screen Recorder and Casting Software 
-#  - Brave Browser - Secure web browser
-#  - Ulauncher - Application Launcher
+          name: golang-go          
 
     - block:
       - name: Adding Peek Repository
@@ -313,16 +308,6 @@
         become: true
         apt:
           name: peek
-
-    - block:
-      - name: Install obsproject Ubuntu Repo
-        become: true
-        apt_repository:
-          repo: 'ppa:obsproject/obs-studio'
-      - name: Install obs Studio
-        become: true
-        apt:
-          name: obs-studio
 
     - block: 
       - name: Install Brave Key
