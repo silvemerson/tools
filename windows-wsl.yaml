@@ -30,13 +30,22 @@
           - git
           - bash-completion
           - gnupg-agent
-          - zsh
           - fonts-hack
-          - tilix
           - mlocate
           - krita
           - jq
           - mtr
+          
+    - name: Install multiple packages sequentially
+      win_chocolatey:
+        name: '{{ item }}'
+        state: present
+      loop:
+      - ms-teams
+      - slack
+      - notion
+      - vscode
+
     - name: Installing AWS CLI via pip3
       become: true
       pip:
@@ -195,12 +204,3 @@
         apt:
           name: golang-go          
 
-    - name: Install multiple packages sequentially
-      win_chocolatey:
-        name: '{{ item }}'
-        state: present
-      loop:
-      - ms-teams
-      - slack
-      - notion
-      - vscode
