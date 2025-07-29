@@ -1,0 +1,214 @@
+---
+- name: Preparing Workstation on Zorin OS 17.3
+  hosts: localhost
+  connection: local
+  vars:
+    user_home: "/home/{{ ansible_user_id }}"
+  tasks:
+
+    - name: Update apt cache
+      become: true
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Installing Base and Network Tools
+      become: true
+      apt:
+        name: "{{ item }}"
+        install_recommends: yes
+        state: present
+      loop:
+        - vim
+        - htop
+        - curl
+        - wget
+        - ncdu
+        - tree
+        - apt-transport-https
+        - ca-certificates
+        - gnupg
+        - python3-pip
+        - make
+        - git
+        - bash-completion
+        - gnupg-agent
+        - zsh
+        - flameshot
+        - fonts-hack-ttf
+        - tilix
+        - virtualbox
+        - mlocate
+        - krita
+        - jq
+        - mtr
+        - net-tools
+        - iputils-ping
+        - traceroute
+        - nmap
+        - dnsutils
+        - whois
+        - iperf3
+        - ethtool
+        - tcpdump
+        - lsof
+        - bat
+
+    - name: Installing AWS CLI via pip3
+      become: true
+      pip:
+        name: awscli
+        executable: pip3
+
+    - block:
+        - name: Check if Oh-My-Zsh is installed
+          stat:
+            path: "{{ user_home }}/.oh-my-zsh"
+          register: ohmyzsh_status
+
+        - name: Install Oh-My-Zsh
+          shell: |
+            RUNZSH=no CHSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+          args:
+            chdir: "{{ user_home }}"
+          when: not ohmyzsh_status.stat.exists
+
+        - name: Change default shell to Zsh
+          become: true
+          user:
+            name: "{{ ansible_user_id }}"
+            shell: /usr/bin/zsh
+
+        - name: Set ZSH theme to agnoster
+          lineinfile:
+            path: "{{ user_home }}/.zshrc"
+            regexp: '^ZSH_THEME='
+            line: 'ZSH_THEME="agnoster"'
+
+        - name: Create completions folder
+          file:
+            path: "{{ user_home }}/.oh-my-zsh/completions"
+            state: directory
+            mode: 0755
+
+        - name: Enable Zsh completions
+          lineinfile:
+            path: "{{ user_home }}/.zshrc"
+            line: 'autoload -U compinit && compinit'
+            state: present
+
+    - name: Install VS Code and Extensions
+      block:
+        - name: Add Microsoft GPG key
+          become: true
+          apt_key:
+            url: https://packages.microsoft.com/keys/microsoft.asc
+            state: present
+
+        - name: Add VS Code repository
+          become: true
+          apt_repository:
+            repo: 'deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main'
+            filename: vscode
+            state: present
+
+        - name: Install Visual Studio Code
+          become: true
+          apt:
+            name: code
+
+        - name: Install VS Code extensions
+          become: false
+          shell: code --install-extension {{ item }} || true
+          loop:
+            - ms-python.python
+            - ms-azuretools.vscode-docker
+            - bbenoist.vagrant
+            - hashicorp.terraform
+            - eamodio.gitlens
+            - njpwerner.autodocstring
+            - gruntfuggly.todo-tree
+
+    - name: Install Google Chrome
+      block:
+        - name: Add Google key
+          become: true
+          apt_key:
+            url: https://dl.google.com/linux/linux_signing_key.pub
+            state: present
+
+        - name: Add Chrome repository
+          become: true
+          apt_repository:
+            repo: 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main'
+            filename: google-chrome
+            state: present
+
+        - name: Install Google Chrome
+          become: true
+          apt:
+            name: google-chrome-stable
+
+    - name: Install Docker and Compose
+      block:
+        - name: Add Docker GPG key
+          become: true
+          apt_key:
+            url: https://download.docker.com/linux/ubuntu/gpg
+            state: present
+
+        - name: Add Docker repo
+          become: true
+          apt_repository:
+            repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+            filename: docker-ce
+            state: present
+
+        - name: Install Docker packages
+          become: true
+          apt:
+            name:
+              - docker-ce
+              - docker-ce-cli
+              - containerd.io
+
+        - name: Add user to docker group
+          become: true
+          user:
+            name: "{{ ansible_user_id }}"
+            groups: docker
+            append: yes
+
+        - name: Install Docker Compose
+          become: true
+          get_url:
+            url: https://github.com/docker/compose/releases/download/1.26.2/docker-compose-Linux-x86_64
+            dest: /usr/local/bin/docker-compose
+            mode: '0755'
+
+    - name: Install Ulauncher and Peek
+      become: true
+      apt:
+        name:
+          - ulauncher
+          - peek
+        state: present
+
+    - name: Install Brave Browser
+      block:
+        - name: Add Brave GPG key
+          become: true
+          apt_key:
+            url: https://brave-browser-apt-release.s3.brave.com/brave-core.asc
+            state: present
+
+        - name: Add Brave repository
+          become: true
+          apt_repository:
+            repo: 'deb [arch=amd64] https://brave-browser-apt-release.s3.brave.com/ stable main'
+            filename: brave
+
+        - name: Install Brave
+          become: true
+          apt:
+            name: brave-browser
