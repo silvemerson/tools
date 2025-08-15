@@ -177,7 +177,10 @@
             repo: "https://download.opensuse.org/repositories/Cloud:/Tools/openSUSE_Tumbleweed/"
             state: present
           when: ansible_distribution_release == "tumbleweed"
-
+        - name: Update zypper cache
+          become: true
+          shell: |
+            zypper refresh
         - name: Add Cloud:Tools repository for Leap
           become: true
           community.general.zypper_repository:
@@ -185,6 +188,12 @@
             repo: "https://download.opensuse.org/repositories/Cloud:/Tools/openSUSE_Leap_15.6/"
             state: present
           when: ansible_distribution_release is search("Leap")
+
+        - name: Update zypper cache
+          become: true
+          shell: |
+            zypper refresh
+
 
         - name: Install google-cloud-sdk package
           become: true
@@ -221,7 +230,11 @@
                 repo: "https://packages.microsoft.com/yumrepos/vscode"
                 state: present
                 auto_import_keys: true
-
+                
+            - name: Update zypper cache
+              become: true
+              shell: |
+                zypper refresh
 
             - name: Install VS Code
               become: true
