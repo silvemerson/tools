@@ -129,15 +129,20 @@
         chmod +x /usr/local/bin/terraform
         rm -f terraform.zip
 
-    - name: Install Vagrant (latest)
+    - name: Install Vagrant
       become: true
-      shell: |
-        latest=$(curl -s https://releases.hashicorp.com/vagrant/ | grep -oP 'vagrant/\K[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)
-        curl -Lo vagrant.zip https://releases.hashicorp.com/vagrant/${latest}/vagrant_${latest}_linux_amd64.zip
-        unzip vagrant.zip
-        mv vagrant /usr/local/bin/
-        chmod +x /usr/local/bin/vagrant
-        rm -f vagrant.zip
+      get_url:
+        url: "https://releases.hashicorp.com/vagrant/2.5.8/vagrant_2.5.8_linux_amd64.zip"
+        dest: /tmp/vagrant.zip
+        mode: '0644'
+
+    - name: Unzip Vagrant
+      become: true
+      unarchive:
+        src: /tmp/vagrant.zip
+        dest: /usr/local/bin/
+        remote_src: yes
+        extra_opts: [ '-j' ]  # descompacta apenas os binários
 
     - name: Install Docker and Compose
       block:
@@ -230,7 +235,7 @@
                 repo: "https://packages.microsoft.com/yumrepos/vscode"
                 state: present
                 auto_import_keys: true
-                
+
             - name: Update zypper cache
               become: true
               shell: |
