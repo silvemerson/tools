@@ -112,13 +112,15 @@
       args:
         creates: /usr/local/bin/kubectl
 
-    - name: Install kind (latest)
-      become: true
+    - name: Download latest kind
       shell: |
-        curl -Lo /usr/local/bin/kind "https://kind.sigs.k8s.io/dl/$(curl -s https://kind.sigs.k8s.io/dl/latest.txt)/kind-linux-amd64"
+        version=$(curl -s https://kind.sigs.k8s.io/dl/latest.txt)
+        curl -Lo /usr/local/bin/kind "https://kind.sigs.k8s.io/dl/$version/kind-linux-amd64"
         chmod +x /usr/local/bin/kind
       args:
         creates: /usr/local/bin/kind
+      become: true
+
 
     - name: Install Terraform (latest)
       become: true
