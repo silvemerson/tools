@@ -10,8 +10,8 @@
 
     - name: Update zypper cache
       become: true
-      community.general.zypper:
-        update_cache: yes
+      shell: |
+        zypper refresh
 
     - name: Installing Base and Network Tools
       become: true
@@ -53,8 +53,6 @@
       become: true
       shell: |
         flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-      args:
-        creates: /var/lib/flatpak/repo
 
     - name: Install OBS Studio via Flatpak
       become: true
@@ -185,11 +183,6 @@
             state: present
           when: ansible_distribution_release is search("Leap")
 
-        - name: Refresh zypper cache
-          become: true
-          community.general.zypper:
-            update_cache: yes
-
         - name: Install google-cloud-sdk package
           become: true
           community.general.zypper:
@@ -209,3 +202,42 @@
             path: "{{ user_home }}/.zshrc"
             line: 'source /usr/share/google-cloud-sdk/completion.zsh.inc'
             state: present
+
+        - name: Install Visual Studio Code
+          block:
+            - name: Import Microsoft GPG key
+              become: true
+              rpm_key:
+                state: present
+                key: https://packages.microsoft.com/keys/microsoft.asc
+
+            - name: Add VS Code repository
+              become: true
+              community.general.zypper_repository:
+                name: vscode
+                repo: "https://packages.microsoft.com/yumrepos/vscode"
+                state: present
+                auto_import_keys: true
+
+            - name: Refresh zypper cache
+              become: true
+              community.general.zypper:
+                update_cache: yes
+
+            - name: Install VS Code
+              become: true
+              community.general.zypper:
+                name: code
+                state: present
+
+            - name: Install VS Code extensions
+              become: false
+              shell: code --install-extension {{ item }} || true
+              loop:
+                - ms-python.python
+                - ms-azuretools.vscode-docker
+                - bbenoist.vagrant
+                - hashicorp.terraform
+                - eamodio.gitlens
+                - njpwerner.autodocstring
+                - gruntfuggly.todo-tree
