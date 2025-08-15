@@ -112,17 +112,12 @@
       args:
         creates: /usr/local/bin/kubectl
 
-    - name: Get latest kind version
-      shell: curl -s https://kind.sigs.k8s.io/dl/latest.txt
-      register: kind_version
-      changed_when: false
-
-    - name: Download kind binary
+    - name: Install kind latest release from GitHub
+      become: true
       get_url:
-        url: "https://kind.sigs.k8s.io/dl/{{ kind_version.stdout }}/kind-linux-amd64"
+        url: "https://github.com/kubernetes-sigs/kind/releases/latest/download/kind-linux-amd64"
         dest: /usr/local/bin/kind
         mode: '0755'
-      become: true
 
     - name: Install Terraform (latest)
       become: true
