@@ -1,0 +1,211 @@
+---
+- name: Preparing Workstation on openSUSE
+  hosts: localhost
+  connection: local
+  vars:
+    user_home: "/home/{{ ansible_user_id }}"
+    terraform_version: "latest"
+    kind_version: "latest"
+  tasks:
+
+    - name: Update zypper cache
+      become: true
+      community.general.zypper:
+        update_cache: yes
+
+    - name: Installing Base and Network Tools
+      become: true
+      community.general.zypper:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - vim
+        - htop
+        - curl
+        - wget
+        - ncdu
+        - tree
+        - python3-pip
+        - make
+        - git
+        - bash-completion
+        - zsh
+        - flameshot
+        - tilix
+        - virtualbox
+        - mlocate
+        - jq
+        - mtr
+        - net-tools
+        - iputils
+        - traceroute
+        - nmap
+        - bind-utils
+        - whois
+        - iperf
+        - ethtool
+        - tcpdump
+        - lsof
+        - bat
+        - flatpak
+
+    - name: Add Flathub remote for Flatpak
+      become: true
+      shell: |
+        flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+      args:
+        creates: /var/lib/flatpak/repo
+
+    - name: Install OBS Studio via Flatpak
+      become: true
+      shell: |
+        flatpak install -y flathub com.obsproject.Studio
+
+    - name: Installing AWS CLI via pip3
+      become: true
+      pip:
+        name: awscli
+        executable: pip3
+
+    - block:
+        - name: Check if Oh-My-Zsh is installed
+          stat:
+            path: "{{ user_home }}/.oh-my-zsh"
+          register: ohmyzsh_status
+
+        - name: Install Oh-My-Zsh
+          shell: |
+            RUNZSH=no CHSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+          args:
+            chdir: "{{ user_home }}"
+          when: not ohmyzsh_status.stat.exists
+
+        - name: Change default shell to Zsh
+          become: true
+          user:
+            name: "{{ ansible_user_id }}"
+            shell: /bin/zsh
+
+        - name: Set ZSH theme to agnoster
+          lineinfile:
+            path: "{{ user_home }}/.zshrc"
+            regexp: '^ZSH_THEME='
+            line: 'ZSH_THEME="agnoster"'
+
+        - name: Create completions folder
+          file:
+            path: "{{ user_home }}/.oh-my-zsh/completions"
+            state: directory
+            mode: 0755
+
+        - name: Enable Zsh completions
+          lineinfile:
+            path: "{{ user_home }}/.zshrc"
+            line: 'autoload -U compinit && compinit'
+            state: present
+
+    - name: Install kubectl (latest)
+      become: true
+      get_url:
+        url: https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl
+        dest: /usr/local/bin/kubectl
+        mode: '0755'
+
+    - name: Install kind (latest)
+      become: true
+      get_url:
+        url: https://kind.sigs.k8s.io/dl/$(curl -Ls https://kind.sigs.k8s.io/dl/latest.txt)/kind-linux-amd64
+        dest: /usr/local/bin/kind
+        mode: '0755'
+
+    - name: Install Terraform (latest)
+      become: true
+      shell: |
+        latest=$(curl -s https://releases.hashicorp.com/terraform/ | grep -oP 'terraform/\K[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)
+        curl -Lo terraform.zip https://releases.hashicorp.com/terraform/${latest}/terraform_${latest}_linux_amd64.zip
+        unzip terraform.zip
+        mv terraform /usr/local/bin/
+        chmod +x /usr/local/bin/terraform
+        rm -f terraform.zip
+
+    - name: Install Vagrant (latest)
+      become: true
+      shell: |
+        latest=$(curl -s https://releases.hashicorp.com/vagrant/ | grep -oP 'vagrant/\K[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)
+        curl -Lo vagrant.zip https://releases.hashicorp.com/vagrant/${latest}/vagrant_${latest}_linux_amd64.zip
+        unzip vagrant.zip
+        mv vagrant /usr/local/bin/
+        chmod +x /usr/local/bin/vagrant
+        rm -f vagrant.zip
+
+    - name: Install Docker and Compose
+      block:
+        - name: Install Docker packages
+          become: true
+          community.general.zypper:
+            name:
+              - docker
+            state: present
+
+        - name: Enable and start Docker
+          become: true
+          systemd:
+            name: docker
+            enabled: yes
+            state: started
+
+        - name: Add user to docker group
+          become: true
+          user:
+            name: "{{ ansible_user_id }}"
+            groups: docker
+            append: yes
+
+        - name: Install Docker Compose (latest)
+          become: true
+          get_url:
+            url: https://github.com/docker/compose/releases/latest/download/docker-compose-Linux-x86_64
+            dest: /usr/local/bin/docker-compose
+            mode: '0755'
+    - name: Install Google Cloud SDK
+      block:
+        - name: Add Cloud:Tools repository for google-cloud-sdk
+          become: true
+          community.general.zypper_repository:
+            name: Cloud_Tools
+            repo: "https://download.opensuse.org/repositories/Cloud:/Tools/openSUSE_Tumbleweed/"
+            state: present
+          when: ansible_distribution_release == "tumbleweed"
+
+        - name: Add Cloud:Tools repository for Leap
+          become: true
+          community.general.zypper_repository:
+            name: Cloud_Tools
+            repo: "https://download.opensuse.org/repositories/Cloud:/Tools/openSUSE_Leap_15.6/"
+            state: present
+          when: ansible_distribution_release is search("Leap")
+
+        - name: Refresh zypper cache
+          become: true
+          community.general.zypper:
+            update_cache: yes
+
+        - name: Install google-cloud-sdk package
+          become: true
+          community.general.zypper:
+            name: google-cloud-sdk
+            state: present
+
+        - name: Enable gcloud bash completion
+          become: true
+          lineinfile:
+            path: /etc/bash.bashrc
+            line: 'source /usr/share/google-cloud-sdk/completion.bash.inc'
+            state: present
+
+        - name: Enable gcloud zsh completion
+          become: true
+          lineinfile:
+            path: "{{ user_home }}/.zshrc"
+            line: 'source /usr/share/google-cloud-sdk/completion.zsh.inc'
+            state: present
