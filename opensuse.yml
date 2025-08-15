@@ -129,20 +129,26 @@
         chmod +x /usr/local/bin/terraform
         rm -f terraform.zip
 
-    - name: Install Vagrant
+    - name: Baixar e instalar o Vagrant 2.4.8
       become: true
       get_url:
-        url: "https://releases.hashicorp.com/vagrant/2.5.8/vagrant_2.5.8_linux_amd64.zip"
+        url: https://releases.hashicorp.com/vagrant/2.4.8/vagrant_2.4.8_linux_amd64.zip
         dest: /tmp/vagrant.zip
         mode: '0644'
 
-    - name: Unzip Vagrant
+    - name: Extrair o Vagrant
       become: true
       unarchive:
         src: /tmp/vagrant.zip
         dest: /usr/local/bin/
         remote_src: yes
-        extra_opts: [ '-j' ]  # descompacta apenas os binários
+
+    - name: Tornar o Vagrant executável
+      become: true
+      file:
+        path: /usr/local/bin/vagrant
+        mode: '0755'
+
 
     - name: Install Docker and Compose
       block:
