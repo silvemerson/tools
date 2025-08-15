@@ -53,6 +53,8 @@
       become: true
       shell: |
         flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+      args:
+        creates: /var/lib/flatpak/repo
 
     - name: Install OBS Studio via Flatpak
       become: true
@@ -102,12 +104,13 @@
             line: 'autoload -U compinit && compinit'
             state: present
 
-    - name: Install kubectl (latest)
+    - name: Download kubectl (latest)
       become: true
-      get_url:
-        url: https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl
-        dest: /usr/local/bin/kubectl
-        mode: '0755'
+      shell: |
+        curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+      args:
+        creates: /usr/local/bin/kubectl
 
     - name: Install kind (latest)
       become: true
@@ -202,7 +205,7 @@
             path: "{{ user_home }}/.zshrc"
             line: 'source /usr/share/google-cloud-sdk/completion.zsh.inc'
             state: present
-
+            
         - name: Install Visual Studio Code
           block:
             - name: Import Microsoft GPG key
@@ -219,10 +222,6 @@
                 state: present
                 auto_import_keys: true
 
-            - name: Refresh zypper cache
-              become: true
-              community.general.zypper:
-                update_cache: yes
 
             - name: Install VS Code
               become: true
