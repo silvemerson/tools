@@ -181,36 +181,33 @@
             mode: '0755'
     - name: Install Google Cloud SDK
       block:
-        - name: Add Cloud:Tools repository for google-cloud-sdk
+        - name: Download Google Cloud SDK installer
           become: true
-          community.general.zypper_repository:
-            name: Cloud_Tools
-            repo: "https://download.opensuse.org/repositories/Cloud:/Tools/openSUSE_Tumbleweed/"
-            state: present
-          when: ansible_distribution_release == "tumbleweed"
-        - name: Update zypper cache
+          get_url:
+            url: "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-434.0.0-linux-x86_64.tar.gz"
+            dest: /tmp/google-cloud-sdk.tar.gz
+            mode: '0644'
+
+        - name: Extract Google Cloud SDK
+          become: true
+          unarchive:
+            src: /tmp/google-cloud-sdk.tar.gz
+            dest: /usr/local/
+            remote_src: yes
+
+        - name: Run Google Cloud SDK install script
           become: true
           shell: |
-            zypper refresh
-        - name: Add Cloud:Tools repository for Leap
-          become: true
-          community.general.zypper_repository:
-            name: Cloud_Tools
-            repo: "https://download.opensuse.org/repositories/Cloud:/Tools/openSUSE_Leap_15.6/"
+            /usr/local/google-cloud-sdk/install.sh --quiet
+          args:
+            creates: /usr/local/google-cloud-sdk/bin/gcloud
+
+        - name: Ensure gcloud is in PATH
+          lineinfile:
+            path: /home/{{ ansible_user_id }}/.zshrc
+            line: 'export PATH=$PATH:/usr/local/google-cloud-sdk/bin'
             state: present
-          when: ansible_distribution_release is search("Leap")
 
-        - name: Update zypper cache
-          become: true
-          shell: |
-            zypper refresh
-
-
-        - name: Install google-cloud-sdk package
-          become: true
-          community.general.zypper:
-            name: google-cloud-sdk
-            state: present
 
         - name: Enable gcloud bash completion
           become: true
